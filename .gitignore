@@ -4,4 +4,8 @@ group_history/
 group_at_time.json
 inbox/
 outbox/
+images/
 *.tmp
+token.txt
+files/
+gameSerises.txt

@@ -136,9 +136,9 @@ function extractReply(output) {
 
 // ============ 调用 Hermes ============
 
-function callHermes(message, sessionKey, sessions, isGroup, groupId, nickname) {
+function callHermes(message, sessionKey, sessions, isGroup, groupId, nickname, images = []) {
   try {
-    const model = isGroup ? 'mimo-v2.5' : 'mimo-v2.5-pro';
+    const model = 'mimo-v2.5';
     const existingSessionId = getSessionId(sessionKey, sessions);
     
     // 构建消息：群聊附带历史
@@ -154,23 +154,27 @@ function callHermes(message, sessionKey, sessions, isGroup, groupId, nickname) {
       fullMessage = message;
     }
     
+    // 图片参数
+    const imageArgs = images.map(img => `--image "${img}"`).join(' ');
+    
     let cmd;
     if (existingSessionId) {
       log(`🔄 继续 ${existingSessionId}`);
-      cmd = `"${HERMES}" chat --resume ${existingSessionId} -m ${model} -q "${fullMessage.replace(/"/g, '\\"')}"`;
+      cmd = `"${HERMES}" chat --resume ${existingSessionId} --profile qqbot -q "${fullMessage.replace(/"/g, '\\"')}" ${imageArgs}`;
     } else {
       log(`🆕 新会话`);
-      cmd = `"${HERMES}" chat -m ${model} -q "${fullMessage.replace(/"/g, '\\"')}"`;
+      cmd = `"${HERMES}" chat --profile qqbot -q "${fullMessage.replace(/"/g, '\\"')}" ${imageArgs}`;
     }
+    log(`🔧 CMD: ${cmd.substring(0, 100)}...`);
     
-    const result = execSync(cmd, { encoding: 'utf-8', timeout: 120000, maxBuffer: 1024 * 1024, windowsHide: true });
+    const result = execSync(cmd, { encoding: 'utf-8', timeout: 300000, maxBuffer: 1024 * 1024, windowsHide: true, env: { ...process.env, HERMES_HOME: 'C:/Users/27554/AppData/Roaming/cn.org.hermesagent.desktop/runtime/hermes-home' } });
     
     // 检查会话是否失效
     if (result.includes('Session not found')) {
       log(`⚠️ 会话 ${existingSessionId} 已失效，创建新会话`);
       delete sessions[sessionKey];
       saveSessions(sessions);
-      return callHermes(message, sessionKey, sessions, isGroup, groupId, nickname);
+      return callHermes(message, sessionKey, sessions, isGroup, groupId, nickname, images);
     }
     
     const sessionMatch = result.match(/Session:\s+([a-z0-9_]+)/);
@@ -190,8 +194,9 @@ function callHermes(message, sessionKey, sessions, isGroup, groupId, nickname) {
     if (err.message.includes('resume') || err.message.includes('session')) {
       delete sessions[sessionKey];
       saveSessions(sessions);
-      return callHermes(message, sessionKey, sessions, isGroup, groupId, nickname);
+      return callHermes(message, sessionKey, sessions, isGroup, groupId, nickname, images);
     }
+    log(`❌ stderr: ${err.stderr ? err.stderr.substring(0, 200) : "none"}`);
     return '抱歉，暂时无法响应。';
   }
 }
@@ -236,10 +241,11 @@ function processInbox() {
         markGroupAt(groupId);
       }
       
-      log(`📩 [${isGroup ? '群' : '私聊'}] [${nickname}]: ${data.message}`);
+      log(`📩 [${isGroup ? '群' : '私聊'}] [${nickname}]: ${data.message || '[图片]'}`);
       
       const sessionKey = isGroup ? `group_${groupId}` : userId;
-      const reply = callHermes(data.message, sessionKey, sessions, isGroup, groupId, nickname);
+      const images = data.images || [];
+      const reply = callHermes(data.message, sessionKey, sessions, isGroup, groupId, nickname, images);
       
       const outFile = path.join(OUTBOX, `reply_${Date.now()}.json`);
       fs.writeFileSync(outFile, JSON.stringify({ type: data.type, userId, groupId, message: reply }));
