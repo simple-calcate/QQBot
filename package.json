@@ -1,0 +1,10 @@
+{
+  "name": "snowluma-hermes-bridge",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "SnowLuma <-> Hermes Agent Bridge",
+  "main": "bridge.mjs",
+  "dependencies": {
+    "ws": "^8.16.0"
+  }
+}

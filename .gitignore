@@ -1,0 +1,7 @@
+node_modules/
+sessions.json
+group_history/
+group_at_time.json
+inbox/
+outbox/
+*.tmp
