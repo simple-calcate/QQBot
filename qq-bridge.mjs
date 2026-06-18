@@ -116,6 +116,61 @@ function downloadImage(url) {
   });
 }
 
+// 通过 SnowLuma HTTP API 获取合并转发消息内容
+function fetchForwardMsg(forwardId) {
+  return new Promise((resolve, reject) => {
+    const postData = JSON.stringify({ id: forwardId });
+    const url = new URL(`${SNOWLUMA_HTTP}/get_forward_msg`);
+    
+    const req = http.request({
+      hostname: url.hostname,
+      port: url.port,
+      path: url.pathname,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${HTTP_TOKEN}`,
+        'Content-Length': Buffer.byteLength(postData)
+      }
+    }, (res) => {
+      let body = '';
+      res.on('data', chunk => body += chunk);
+      res.on('end', () => {
+        try {
+          const result = JSON.parse(body);
+          if (result.status === 'ok' && result.data?.messages) {
+            const lines = result.data.messages.map(msg => {
+              if (!msg.message) return '';
+              if (Array.isArray(msg.message)) {
+                return msg.message
+                  .filter(seg => seg.type === 'text')
+                  .map(seg => seg.data?.text || '')
+                  .join('');
+              }
+              return String(msg.message).replace(/\[CQ:[^\]]+\]/g, '').trim();
+            }).filter(l => l);
+            resolve(lines);
+          } else {
+            reject(new Error(result.wording || '获取转发消息失败'));
+          }
+        } catch (e) {
+          reject(e);
+        }
+      });
+    });
+    
+    req.on('error', reject);
+    req.write(postData);
+    req.end();
+  });
+}
+
+// 从 raw_message 中提取转发消息 ID
+function extractForwardId(message) {
+  const match = message.match(/\[CQ:forward,id=([^\]]+)\]/);
+  return match ? match[1] : null;
+}
+
 function connect() {
   ws = new WebSocket(SNOWLUMA_WS, {
     headers: { 'Authorization': `Bearer ${WS_TOKEN}` }
@@ -171,8 +226,22 @@ async function handleMessageAsync(data) {
   if (userId === selfId) return;
   
   if (messageType === 'group') {
+    // 检测转发消息
+    const forwardId = extractForwardId(message);
+    let forwardContent = '';
+    if (forwardId) {
+      try {
+        const lines = await fetchForwardMsg(forwardId);
+        forwardContent = lines.join(`
+`);
+        log(`📋 获取转发消息: ${lines.length} 条`);
+      } catch (e) {
+        log(`❌ 获取转发消息失败: ${e.message}`);
+      }
+    }
+    
     // 记录所有群消息
-    const cleanMsg = message
+    const cleanMsg = (forwardContent || message)
       .replace(/\[CQ:[^\]]+\]/g, '')  // 移除所有CQ码
       .replace(/@\S+/g, '')
       .trim();
@@ -211,15 +280,24 @@ async function handleMessageAsync(data) {
       }
     }
     
-    // 如果@后面没有实际内容也没有图片，跳过
-    if (!cleanMsg && imagePaths.length === 0) return;
+    // 如果@后面没有实际内容也没有图片也没有转发消息，跳过
+    if (!cleanMsg && imagePaths.length === 0 && !forwardContent) return;
     
-    log(`📩 @消息 [${nickname}]: ${cleanMsg || '[图片]'}`);
+    // 构建消息内容：如果有转发内容，加上前缀
+    let finalMsg = cleanMsg || '';
+    if (forwardContent && !finalMsg) {
+      finalMsg = '[转发消息] ' + forwardContent;
+    } else if (forwardContent) {
+      finalMsg = '[转发消息] ' + forwardContent + `
+` + finalMsg;
+    }
+    
+    log(`📩 @消息 [${nickname}]: ${finalMsg || '[图片]'}`);
     
     const info = {
       id: id + 100000, time: new Date().toISOString(),
       type: 'group', userId, groupId: data.group_id,
-      message: cleanMsg || '', nickname, selfId,
+      message: finalMsg, nickname, selfId,
       images: imagePaths,
       messageId: data.message_id
     };
