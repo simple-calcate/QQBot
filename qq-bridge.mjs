@@ -19,6 +19,7 @@ const BOT_NICKNAME = '11';
 let ws = null;
 let msgId = 0;
 const recentMsgIds = new Set();
+const sentMsgCallbacks = new Map(); // echo -> callback for tracking sent message_ids
 
 function log(msg) {
   console.log(`[${new Date().toLocaleTimeString()}] ${msg}`);
@@ -132,7 +133,12 @@ function connect() {
   ws.on('message', (data) => {
     try {
       const msg = JSON.parse(data.toString());
-      if (msg.post_type === 'message') handleMessage(msg);
+      if (msg.post_type === 'message') { handleMessage(msg); return; }
+      // Handle send response: capture message_id
+      if (msg.echo && msg.status === 'ok' && msg.data && msg.data.message_id) {
+        const cb = sentMsgCallbacks.get(msg.echo);
+        if (cb) { cb(msg.data.message_id); sentMsgCallbacks.delete(msg.echo); }
+      }
     } catch (e) {}
   });
   
@@ -175,7 +181,8 @@ async function handleMessageAsync(data) {
       const recordData = {
         id, time: new Date().toISOString(),
         type: 'group_record', userId, groupId: data.group_id,
-        message: cleanMsg, nickname, selfId
+        message: cleanMsg, nickname, selfId,
+        messageId: data.message_id
       };
       fs.writeFileSync(path.join(INBOX, `record_${id}.json`), JSON.stringify(recordData, null, 2));
     }
@@ -213,7 +220,8 @@ async function handleMessageAsync(data) {
       id: id + 100000, time: new Date().toISOString(),
       type: 'group', userId, groupId: data.group_id,
       message: cleanMsg || '', nickname, selfId,
-      images: imagePaths
+      images: imagePaths,
+      messageId: data.message_id
     };
     fs.writeFileSync(path.join(INBOX, `at_${id}.json`), JSON.stringify(info, null, 2));
     
@@ -238,7 +246,8 @@ async function handleMessageAsync(data) {
     const info = {
       id, time: new Date().toISOString(),
       type: 'private', userId, nickname, message: cleanMsg || '', selfId,
-      images: imagePaths
+      images: imagePaths,
+      messageId: data.message_id
     };
     fs.writeFileSync(path.join(INBOX, `${id}.json`), JSON.stringify(info, null, 2));
   }
@@ -256,13 +265,26 @@ function pollOutbox() {
         
         if (!ws || ws.readyState !== WebSocket.OPEN) continue;
         
+        const echo = `reply_${Date.now()}`;
         const request = {
           action: data.type === 'private' ? 'send_private_msg' : 'send_group_msg',
           params: data.type === 'private' 
             ? { user_id: data.userId, message: data.message }
             : { group_id: data.groupId, message: data.message },
-          echo: `reply_${Date.now()}`
+          echo: echo
         };
+        
+        // Track sent message_id
+        sentMsgCallbacks.set(echo, (messageId) => {
+          const sentFile = path.join(INBOX, 'sent_' + echo + '.json');
+          try {
+            fs.writeFileSync(sentFile, JSON.stringify({
+              type: 'sent', messageId, time: Date.now(),
+              userId: data.userId, groupId: data.groupId, message: data.message
+            }));
+          } catch(e) {}
+          log(`📤 发送成功 [mid:${messageId}]`);
+        });
         
         ws.send(JSON.stringify(request));
         log(`📤 发送到 [${data.userId || data.groupId}]`);

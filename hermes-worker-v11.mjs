@@ -9,6 +9,15 @@ import { execSync } from 'child_process';
 const INBOX = 'C:/Users/27554/Desktop/QQBot/inbox';
 const OUTBOX = 'C:/Users/27554/Desktop/QQBot/outbox';
 const GROUP_HISTORY_DIR = 'C:/Users/27554/Desktop/QQBot/group_history';
+const SENT_HISTORY_FILE = 'C:/Users/27554/Desktop/QQBot/sent_history.json';
+
+// Load/save sent message history (message_id -> info)
+function loadSentHistory() {
+  try { return JSON.parse(fs.readFileSync(SENT_HISTORY_FILE, 'utf-8')); } catch { return {}; }
+}
+function saveSentHistory(history) {
+  fs.writeFileSync(SENT_HISTORY_FILE, JSON.stringify(history, null, 2));
+}
 const SESSIONS_FILE = 'C:/Users/27554/Desktop/QQBot/sessions.json';
 const HERMES = 'C:/Users/27554/AppData/Roaming/cn.org.hermesagent.desktop/runtime/versions/0.16.0-cn.6/hermes-agent-cn-runtime-win32-x64.exe';
 
@@ -51,9 +60,11 @@ function saveGroupHistory(groupId, history) {
   fs.writeFileSync(path.join(GROUP_HISTORY_DIR, `${groupId}.json`), JSON.stringify(history, null, 2));
 }
 
-function recordGroupMessage(groupId, userId, message, nickname) {
+function recordGroupMessage(groupId, userId, message, nickname, messageId) {
   const history = loadGroupHistory(groupId);
-  history.push({ time: Date.now(), userId: String(userId), nickname: nickname || String(userId), message });
+  const entry = { time: Date.now(), userId: String(userId), nickname: nickname || String(userId), message };
+  if (messageId) entry.messageId = messageId;
+  history.push(entry);
   saveGroupHistory(groupId, history.filter(h => h.time > Date.now() - SESSION_EXPIRE_MS));
 }
 
@@ -66,7 +77,8 @@ function getRecentGroupHistory(groupId) {
   if (recent.length === 0) return '';
   return recent.map(h => {
     const time = new Date(h.time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-    return `[${time}]${h.nickname}: ${h.message}`;
+    const mid = h.messageId ? `[mid:${h.messageId}]` : '';
+    return `[${time}]${h.nickname}: ${h.message}${mid}`;
   }).join(' | ');
 }
 
@@ -223,6 +235,18 @@ function processInbox() {
       // 立即删除，防止重复处理
       try { fs.unlinkSync(filePath); } catch(e) {}
       
+      // Track sent message_ids from bridge
+      if (data.type === 'sent' && data.messageId) {
+        const sent = loadSentHistory();
+        sent[String(data.messageId)] = { time: data.time, userId: data.userId, groupId: data.groupId, message: data.message };
+        // Keep only last 500 entries
+        const keys = Object.keys(sent);
+        if (keys.length > 500) { keys.slice(0, keys.length - 500).forEach(k => delete sent[k]); }
+        saveSentHistory(sent);
+        try { fs.unlinkSync(filePath); } catch(e) {}
+        continue;
+      }
+      
       const userId = String(data.userId);
       const isGroup = data.type === 'group';
       const isRecord = data.type === 'group_record';
@@ -231,7 +255,7 @@ function processInbox() {
       
       // 只记录历史
       if (isRecord && groupId) {
-        recordGroupMessage(groupId, userId, data.message, nickname);
+        recordGroupMessage(groupId, userId, data.message, nickname, data.messageId);
         try { fs.unlinkSync(filePath); } catch(e) {}
         continue;
       }
