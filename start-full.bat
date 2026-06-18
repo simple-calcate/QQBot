@@ -10,18 +10,48 @@ echo [0] Cleaning old processes...
 taskkill /F /IM node.exe >nul 2>&1
 ping -n 3 127.0.0.1 >nul
 
-echo [1/3] Starting SnowLuma...
-start "SnowLuma" cmd /c "cd /d C:\Users\27554\Desktop\SnowLuma && node.exe index.mjs"
-ping -n 10 127.0.0.1 >nul
+echo [1/4] Starting SnowLuma...
+start "" cmd /c "cd /d C:\Users\27554\Desktop\SnowLuma && node.exe index.mjs"
+ping -n 3 127.0.0.1 >nul
 
-echo [2/3] Starting Hermes Worker...
+echo [2/4] Waiting for SnowLuma WebUI...
+:WAIT_WEBUI
+curl -s --max-time 2 http://127.0.0.1:5099 >nul 2>&1
+if errorlevel 1 (
+    ping -n 2 127.0.0.1 >nul
+    goto WAIT_WEBUI
+)
+echo       WebUI ready at http://localhost:5099
+echo.
+
+echo ========================================
+echo   Please login QQ via WebUI:
+echo   http://localhost:5099
+echo.
+echo   After login, OneBot ports 3000/3001
+echo   will become available automatically.
+echo ========================================
+echo.
+echo [3/4] Waiting for OneBot port 3000...
+:WAIT_ONEBOT
+netstat -an | findstr ":3000 " | findstr "LISTENING" >nul 2>&1
+if errorlevel 1 (
+    ping -n 3 127.0.0.1 >nul
+    goto WAIT_ONEBOT
+)
+echo       OneBot ready!
+echo.
+
+echo [4/4] Starting Hermes Worker and QQ Bridge...
 start "Hermes Worker" cmd /c "cd /d C:\Users\27554\Desktop\QQBot && C:\Users\27554\Desktop\SnowLuma\node.exe hermes-worker-v11.mjs"
 ping -n 3 127.0.0.1 >nul
 
-echo [3/3] Starting QQ Bridge...
 echo.
 echo ========================================
-echo   System started!
+echo   All systems started!
+echo   - SnowLuma: http://localhost:5099
+echo   - OneBot HTTP: http://localhost:3000
+echo   - OneBot WS: ws://localhost:3001
 echo   - Private: reply all messages
 echo   - Group: reply @messages with history
 echo   - Press Ctrl+C to stop
