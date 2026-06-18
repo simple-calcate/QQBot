@@ -51,7 +51,7 @@ const TOOLS = [
   },
   {
     "name": "send_msg",
-    "description": "send msg (universal)",
+    "description": "send msg",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -78,7 +78,7 @@ const TOOLS = [
   },
   {
     "name": "delete_msg",
-    "description": "delete/recall msg",
+    "description": "delete msg",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -93,7 +93,7 @@ const TOOLS = [
   },
   {
     "name": "get_msg",
-    "description": "get msg by id",
+    "description": "get msg",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -149,7 +149,7 @@ const TOOLS = [
   },
   {
     "name": "can_send_image",
-    "description": "check can send image",
+    "description": "check",
     "inputSchema": {
       "type": "object",
       "properties": {}
@@ -157,7 +157,7 @@ const TOOLS = [
   },
   {
     "name": "can_send_record",
-    "description": "check can send record",
+    "description": "check",
     "inputSchema": {
       "type": "object",
       "properties": {}
@@ -165,7 +165,7 @@ const TOOLS = [
   },
   {
     "name": "get_status",
-    "description": "get bot status",
+    "description": "status",
     "inputSchema": {
       "type": "object",
       "properties": {}
@@ -173,7 +173,7 @@ const TOOLS = [
   },
   {
     "name": "get_version_info",
-    "description": "get version info",
+    "description": "version",
     "inputSchema": {
       "type": "object",
       "properties": {}
@@ -181,7 +181,7 @@ const TOOLS = [
   },
   {
     "name": "get_stranger_info",
-    "description": "get stranger info",
+    "description": "stranger info",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -199,7 +199,7 @@ const TOOLS = [
   },
   {
     "name": "get_friend_list",
-    "description": "get friend list",
+    "description": "friend list",
     "inputSchema": {
       "type": "object",
       "properties": {}
@@ -207,7 +207,7 @@ const TOOLS = [
   },
   {
     "name": "get_group_info",
-    "description": "get group info",
+    "description": "group info",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -225,7 +225,7 @@ const TOOLS = [
   },
   {
     "name": "get_group_list",
-    "description": "get group list",
+    "description": "group list",
     "inputSchema": {
       "type": "object",
       "properties": {}
@@ -233,7 +233,7 @@ const TOOLS = [
   },
   {
     "name": "get_group_member_info",
-    "description": "get group member info",
+    "description": "member info",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -255,7 +255,7 @@ const TOOLS = [
   },
   {
     "name": "get_group_member_list",
-    "description": "get group member list",
+    "description": "member list",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -270,7 +270,7 @@ const TOOLS = [
   },
   {
     "name": "get_group_honor_info",
-    "description": "get group honor info",
+    "description": "honor info",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -289,7 +289,7 @@ const TOOLS = [
   },
   {
     "name": "set_group_kick",
-    "description": "kick group member",
+    "description": "kick",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -311,7 +311,7 @@ const TOOLS = [
   },
   {
     "name": "set_group_ban",
-    "description": "ban group member",
+    "description": "ban",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -332,8 +332,70 @@ const TOOLS = [
     }
   },
   {
+    "name": "set_group_anonymous_ban",
+    "description": "ban anon",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "group_id": {
+          "type": "integer"
+        },
+        "flag": {
+          "type": "string"
+        },
+        "duration": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "group_id",
+        "flag"
+      ]
+    }
+  },
+  {
     "name": "set_group_whole_ban",
-    "description": "whole group ban",
+    "description": "whole ban",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "group_id": {
+          "type": "integer"
+        },
+        "enable": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "group_id"
+      ]
+    }
+  },
+  {
+    "name": "set_group_admin",
+    "description": "set admin",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "group_id": {
+          "type": "integer"
+        },
+        "user_id": {
+          "type": "integer"
+        },
+        "enable": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "group_id",
+        "user_id"
+      ]
+    }
+  },
+  {
+    "name": "set_group_anonymous",
+    "description": "enable anon",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -351,7 +413,7 @@ const TOOLS = [
   },
   {
     "name": "set_group_card",
-    "description": "set group card",
+    "description": "set card",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -373,7 +435,7 @@ const TOOLS = [
   },
   {
     "name": "set_group_name",
-    "description": "set group name",
+    "description": "set name",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -392,7 +454,7 @@ const TOOLS = [
   },
   {
     "name": "set_group_leave",
-    "description": "leave group",
+    "description": "leave",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -410,7 +472,7 @@ const TOOLS = [
   },
   {
     "name": "set_group_special_title",
-    "description": "set group special title",
+    "description": "set title",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -435,7 +497,7 @@ const TOOLS = [
   },
   {
     "name": "get_image",
-    "description": "get image info",
+    "description": "get image",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -450,7 +512,7 @@ const TOOLS = [
   },
   {
     "name": "get_record",
-    "description": "get record info",
+    "description": "get record",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -469,7 +531,7 @@ const TOOLS = [
   },
   {
     "name": "set_friend_add_request",
-    "description": "handle friend request",
+    "description": "friend req",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -491,7 +553,7 @@ const TOOLS = [
   },
   {
     "name": "set_group_add_request",
-    "description": "handle group request",
+    "description": "group req",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -517,7 +579,7 @@ const TOOLS = [
   },
   {
     "name": "get_cookies",
-    "description": "get cookies",
+    "description": "cookies",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -532,7 +594,7 @@ const TOOLS = [
   },
   {
     "name": "get_csrf_token",
-    "description": "get csrf token",
+    "description": "csrf",
     "inputSchema": {
       "type": "object",
       "properties": {}
@@ -540,7 +602,7 @@ const TOOLS = [
   },
   {
     "name": "get_credentials",
-    "description": "get credentials",
+    "description": "creds",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -552,10 +614,46 @@ const TOOLS = [
         "domain"
       ]
     }
+  },
+  {
+    "name": "set_restart",
+    "description": "restart",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "delay": {
+          "type": "integer"
+        }
+      }
+    }
+  },
+  {
+    "name": "clean_cache",
+    "description": "clean cache",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
   }
 ];
 
 console.log(TOOLS.length + " tools");
+
+// Rate limiter for send_*_msg: max 1 per 600ms to avoid Tencent ban
+var lastSendTime = 0;
+var SEND_INTERVAL = 600;
+var SEND_TOOLS = new Set(["send_private_msg", "send_group_msg", "send_msg"]);
+
+function rateLimitedSend(action, params) {
+  return new Promise(function(resolve, reject) {
+    var now = Date.now();
+    var wait = Math.max(0, lastSendTime + SEND_INTERVAL - now);
+    setTimeout(function() {
+      lastSendTime = Date.now();
+      callOneBot(action, params).then(resolve).catch(reject);
+    }, wait);
+  });
+}
 
 function callOneBot(action, params) {
   if (!params) params = {};
@@ -580,7 +678,12 @@ var TOOL_SET = new Set(TOOLS.map(function(t) { return t.name; }));
 
 async function handleTool(name, args) {
   if (!TOOL_SET.has(name)) return { content: [{ type: "text", text: "Unknown: " + name }], isError: true };
-  var r = await callOneBot(name, args);
+  var r;
+  if (SEND_TOOLS.has(name)) {
+    r = await rateLimitedSend(name, args);
+  } else {
+    r = await callOneBot(name, args);
+  }
   return { content: [{ type: "text", text: JSON.stringify(r, null, 2) }] };
 }
 
@@ -593,7 +696,7 @@ var server = http.createServer(async function(req, res) {
     var method = rpc.method, params = rpc.params, id = rpc.id;
     try {
       var result;
-      if (method === "initialize") { result = { protocolVersion: "2024-11-05", capabilities: { tools: {} }, serverInfo: { name: "onebot-v11-mcp", version: "1.0.0" } }; }
+      if (method === "initialize") { result = { protocolVersion: "2024-11-05", capabilities: { tools: {} }, serverInfo: { name: "onebot-v11-mcp", version: "1.1.0" } }; }
       else if (method === "notifications/initialized") { res.writeHead(202); res.end(); return; }
       else if (method === "tools/list") { result = { tools: TOOLS }; }
       else if (method === "tools/call") { result = await handleTool(params.name, params.arguments || {}); }
