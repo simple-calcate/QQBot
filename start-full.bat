@@ -1,5 +1,6 @@
 @echo off
 chcp 65001 >nul
+set NODE_OPTIONS=--max-old-space-size=4096
 title QQ Bot + Hermes Agent
 echo ========================================
 echo   QQ Bot + Hermes Agent
@@ -11,7 +12,7 @@ taskkill /F /IM node.exe >nul 2>&1
 ping -n 3 127.0.0.1 >nul
 
 echo [1/4] Starting SnowLuma...
-start "" cmd /c "cd /d C:\Users\27554\Desktop\SnowLuma && node.exe index.mjs"
+start "" cmd /c "chcp 65001 >nul && cd /d C:\Users\27554\Desktop\SnowLuma && node.exe index.mjs"
 ping -n 3 127.0.0.1 >nul
 
 echo [2/4] Waiting for SnowLuma WebUI...
@@ -43,7 +44,7 @@ echo       OneBot ready!
 echo.
 
 echo [4/4] Starting Hermes Worker and QQ Bridge...
-start "Hermes Worker" cmd /c "cd /d C:\Users\27554\Desktop\QQBot && C:\Users\27554\Desktop\SnowLuma\node.exe hermes-worker-v11.mjs"
+start "Hermes Worker" cmd /c "chcp 65001 >nul && cd /d C:\Users\27554\Desktop\QQBot && C:\Users\27554\Desktop\SnowLuma\node.exe hermes-worker-v11.mjs"
 ping -n 3 127.0.0.1 >nul
 
 echo.

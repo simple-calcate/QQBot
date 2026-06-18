@@ -179,7 +179,7 @@ function callHermes(message, sessionKey, sessions, isGroup, groupId, nickname, i
     }
     log(`🔧 CMD: ${cmd.substring(0, 100)}...`);
     
-    const result = execSync(cmd, { encoding: 'utf-8', timeout: 300000, maxBuffer: 1024 * 1024, windowsHide: true, env: { ...process.env, HERMES_HOME: 'C:/Users/27554/AppData/Roaming/cn.org.hermesagent.desktop/runtime/hermes-home' } });
+    const result = execSync(cmd, { encoding: 'utf-8', timeout: 300000, maxBuffer: 1024 * 1024, windowsHide: true, env: { ...process.env, HERMES_HOME: 'C:/Users/27554/AppData/Roaming/cn.org.hermesagent.desktop/runtime/hermes-home', PYTHONIOENCODING: 'utf-8', LANG: 'en_US.UTF-8', PYTHONUTF8: '1' } });
     
     // 检查会话是否失效
     if (result.includes('Session not found')) {
