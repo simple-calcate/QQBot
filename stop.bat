@@ -1,6 +1,8 @@
 @echo off
-chcp 65001
-echo 正在停止所有 QQ Bot 进程...
+chcp 65001 >nul
+echo Stopping QQ Bot...
 taskkill /F /IM node.exe >nul 2>&1
-echo 已停止。
-timeout /t 2 /nobreak >nul
+taskkill /F /FI "WINDOWTITLE eq SnowLuma*" >nul 2>&1
+taskkill /F /FI "WINDOWTITLE eq Hermes Worker*" >nul 2>&1
+echo Done.
+timeout /t 2 >nul

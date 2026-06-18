@@ -1,18 +1,22 @@
 @echo off
 chcp 65001 >nul
-set NODE_OPTIONS=--max-old-space-size=4096
 title QQ Bot + Hermes Agent
+
 echo ========================================
 echo   QQ Bot + Hermes Agent
+echo   (Restart: just close and re-run)
 echo ========================================
 echo.
 
-echo [0] Cleaning old processes...
+echo [0] Killing all old node processes...
 taskkill /F /IM node.exe >nul 2>&1
+:: Also kill any leftover cmd windows with our titles
+taskkill /F /FI "WINDOWTITLE eq SnowLuma*" >nul 2>&1
+taskkill /F /FI "WINDOWTITLE eq Hermes Worker*" >nul 2>&1
 ping -n 3 127.0.0.1 >nul
 
 echo [1/4] Starting SnowLuma...
-start "" cmd /c "chcp 65001 >nul && cd /d C:\Users\27554\Desktop\SnowLuma && node.exe index.mjs"
+start "SnowLuma" cmd /c "chcp 65001 >nul && cd /d C:\Users\27554\Desktop\SnowLuma && node.exe index.mjs"
 ping -n 3 127.0.0.1 >nul
 
 echo [2/4] Waiting for SnowLuma WebUI...
@@ -53,9 +57,9 @@ echo   All systems started!
 echo   - SnowLuma: http://localhost:5099
 echo   - OneBot HTTP: http://localhost:3000
 echo   - OneBot WS: ws://localhost:3001
-echo   - Private: reply all messages
-echo   - Group: reply @messages with history
-echo   - Press Ctrl+C to stop
+echo.
+echo   To restart: close all windows, re-run
+echo   To stop: close this window or Ctrl+C
 echo ========================================
 echo.
 cd /d C:\Users\27554\Desktop\QQBot
