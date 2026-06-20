@@ -271,9 +271,32 @@ function processInbox() {
       const images = data.images || [];
       const reply = callHermes(data.message, sessionKey, sessions, isGroup, groupId, nickname, images);
       
-      const outFile = path.join(OUTBOX, `reply_${Date.now()}.json`);
-      fs.writeFileSync(outFile, JSON.stringify({ type: data.type, userId, groupId, message: reply }));
-      log(`📤 已发送`);
+      // 检测 MEDIA: 标记，支持文件发送
+      const mediaMatch = reply.match(/MEDIA:(.+)/);
+      if (mediaMatch) {
+        const filePath = mediaMatch[1].trim();
+        if (fs.existsSync(filePath)) {
+          const outFile = path.join(OUTBOX, `file_${Date.now()}.json`);
+          fs.writeFileSync(outFile, JSON.stringify({
+            kind: 'file', type: data.type, userId, groupId, filePath, fileName: path.basename(filePath)
+          }));
+          // 同时发送文本说明（去掉MEDIA标记后的部分）
+          const textPart = reply.replace(/MEDIA:.+/, '').trim();
+          if (textPart) {
+            const textFile = path.join(OUTBOX, `reply_${Date.now()}.json`);
+            fs.writeFileSync(textFile, JSON.stringify({ type: data.type, userId, groupId, message: textPart }));
+          }
+          log(`📎 已发送文件: ${path.basename(filePath)}`);
+        } else {
+          log(`❌ 文件不存在: ${filePath}`);
+          const outFile = path.join(OUTBOX, `reply_${Date.now()}.json`);
+          fs.writeFileSync(outFile, JSON.stringify({ type: data.type, userId, groupId, message: reply }));
+        }
+      } else {
+        const outFile = path.join(OUTBOX, `reply_${Date.now()}.json`);
+        fs.writeFileSync(outFile, JSON.stringify({ type: data.type, userId, groupId, message: reply }));
+        log(`📤 已发送`);
+      }
     }
   } catch (err) {
     if (err.code !== 'ENOENT') log(`❌ ${err.message}`);
