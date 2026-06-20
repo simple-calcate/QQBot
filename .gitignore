@@ -10,3 +10,15 @@ token.txt
 files/
 gameSerises.txt
 sent_history.json
+
+# 复习资料（非项目文件）
+H7120Z_*.html
+H7120Z_*.pdf
+build_*.py
+build_*.js
+extract_*.py
+gen_*.py
+generate_*.js
+generate_*.cjs
+remaining_*.html
+img/
