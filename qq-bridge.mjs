@@ -230,6 +230,7 @@ async function handleMessageAsync(data) {
     const forwardId = extractForwardId(message);
     let forwardContent = '';
     if (forwardId) {
+      log(`📋 检测到转发消息，尝试获取内容...`);
       try {
         const lines = await fetchForwardMsg(forwardId);
         forwardContent = lines.join(`
@@ -237,6 +238,8 @@ async function handleMessageAsync(data) {
         log(`📋 获取转发消息: ${lines.length} 条`);
       } catch (e) {
         log(`❌ 获取转发消息失败: ${e.message}`);
+        // 获取失败时保留标记，避免消息变成空的
+        forwardContent = '[转发消息 - 内容无法获取]';
       }
     }
     
@@ -331,42 +334,121 @@ async function handleMessageAsync(data) {
   }
 }
 
+// 通过 SnowLuma HTTP API 上传文件
+function uploadFile(filePath, target, targetId) {
+  return new Promise((resolve, reject) => {
+    const fileName = path.basename(filePath);
+    const postData = JSON.stringify({ file: filePath.replace(/\\/g, '/'), name: fileName });
+    const apiPath = target === 'group' ? '/upload_group_file' : '/upload_private_file';
+    const params = target === 'group'
+      ? { group_id: targetId }
+      : { user_id: String(targetId) };
+    
+    const reqData = JSON.stringify({ ...params, file: filePath.replace(/\\/g, '/'), name: fileName });
+    
+    const req = http.request({
+      hostname: '127.0.0.1',
+      port: 3000,
+      path: apiPath,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${HTTP_TOKEN}`,
+        'Content-Length': Buffer.byteLength(reqData)
+      }
+    }, (res) => {
+      let body = '';
+      res.on('data', chunk => body += chunk);
+      res.on('end', () => {
+        try {
+          const result = JSON.parse(body);
+          if (result.status === 'ok' && result.data?.file_id) {
+            resolve(result.data.file_id);
+          } else {
+            reject(new Error(result.wording || '上传文件失败'));
+          }
+        } catch (e) { reject(e); }
+      });
+    });
+    req.on('error', reject);
+    req.write(reqData);
+    req.end();
+  });
+}
+
 // 轮询 outbox
 function pollOutbox() {
-  setInterval(() => {
+  setInterval(async () => {
     try {
       const files = fs.readdirSync(OUTBOX);
       for (const file of files) {
         if (!file.endsWith('.json')) continue;
         const filePath = path.join(OUTBOX, file);
-        const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+        let data;
+        try {
+          data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+        } catch (e) { continue; }
         
         if (!ws || ws.readyState !== WebSocket.OPEN) continue;
         
-        const echo = `reply_${Date.now()}`;
-        const request = {
-          action: data.type === 'private' ? 'send_private_msg' : 'send_group_msg',
-          params: data.type === 'private' 
-            ? { user_id: data.userId, message: data.message }
-            : { group_id: data.groupId, message: data.message },
-          echo: echo
-        };
-        
-        // Track sent message_id
-        sentMsgCallbacks.set(echo, (messageId) => {
-          const sentFile = path.join(INBOX, 'sent_' + echo + '.json');
-          try {
-            fs.writeFileSync(sentFile, JSON.stringify({
-              type: 'sent', messageId, time: Date.now(),
-              userId: data.userId, groupId: data.groupId, message: data.message
-            }));
-          } catch(e) {}
-          log(`📤 发送成功 [mid:${messageId}]`);
-        });
-        
-        ws.send(JSON.stringify(request));
-        log(`📤 发送到 [${data.userId || data.groupId}]`);
-        fs.unlinkSync(filePath);
+        try {
+          if (data.kind === 'file') {
+            // 文件发送：先上传，再发送
+            const target = data.type === 'group' ? 'group' : 'private';
+            const targetId = target === 'group' ? data.groupId : data.userId;
+            
+            log(`📎 上传文件: ${path.basename(data.filePath)}`);
+            const fileId = await uploadFile(data.filePath, target, targetId);
+            log(`📎 上传成功 file_id: ${fileId.substring(0, 20)}...`);
+            
+            const echo = `reply_${Date.now()}`;
+            const fileMsg = [{ type: 'file', data: { file_id: fileId } }];
+            const request = {
+              action: target === 'group' ? 'send_group_msg' : 'send_private_msg',
+              params: target === 'group'
+                ? { group_id: data.groupId, message: fileMsg }
+                : { user_id: data.userId, message: fileMsg },
+              echo: echo
+            };
+            
+            sentMsgCallbacks.set(echo, (messageId) => {
+              log(`📤 文件发送成功 [mid:${messageId}]`);
+            });
+            
+            ws.send(JSON.stringify(request));
+            log(`📤 文件发送到 [${targetId}]`);
+            
+          } else {
+            // 普通消息
+            const echo = `reply_${Date.now()}`;
+            const request = {
+              action: data.type === 'private' ? 'send_private_msg' : 'send_group_msg',
+              params: data.type === 'private'
+                ? { user_id: data.userId, message: data.message }
+                : { group_id: data.groupId, message: data.message },
+              echo: echo
+            };
+            
+            sentMsgCallbacks.set(echo, (messageId) => {
+              const sentFile = path.join(INBOX, 'sent_' + echo + '.json');
+              try {
+                fs.writeFileSync(sentFile, JSON.stringify({
+                  type: 'sent', messageId, time: Date.now(),
+                  userId: data.userId, groupId: data.groupId, message: data.message
+                }));
+              } catch(e) {}
+              log(`📤 发送成功 [mid:${messageId}]`);
+            });
+            
+            ws.send(JSON.stringify(request));
+            log(`📤 发送到 [${data.userId || data.groupId}]`);
+          }
+          
+          fs.unlinkSync(filePath);
+        } catch (e) {
+          log(`❌ 发送失败: ${e.message}`);
+          // 发送失败不删除文件，下次重试
+        }
       }
     } catch (e) {}
   }, 1000);
